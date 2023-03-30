@@ -37,7 +37,7 @@ async function run() {
     repo: context.payload.pull_request.base.repo.name,
     pull_number: context.payload.pull_request.number,
     mediaType: {
-      format: "patch",
+      format: "raw",
     },
   });
   core.info(JSON.stringify(pullRequest.assignee));
