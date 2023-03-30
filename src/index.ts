@@ -40,14 +40,15 @@ async function run() {
     owner: pull_request.base.user.login,
     repo: pull_request.base.repo.name,
   };
-  const { data: compared } = await octokit.rest.repos.compareCommits({
-    ...repo,
-    base: pull_request.base.sha,
-    head: pull_request.head.sha,
-  });
+  core.info(`params: ${JSON.stringify(repo)}`);
+  const { data: compared } =
+    await octokit.rest.repos.compareCommitsWithBasehead({
+      ...repo,
+      basehead: `${pull_request.base.sha}...${pull_request.head.sha}`,
+    });
 
   if (!compared.files || compared.files.length === 0) return;
-
+  core.info(`compared: ${JSON.stringify(compared)}`);
   const files = compared.files.filter((file) => {
     return (
       file.patch &&
@@ -64,7 +65,7 @@ async function run() {
         commit_id: compared.commits[compared.commits.length - 1].sha,
         path: file.filename,
         body: response,
-        line: file.patch.split("\n").length - 1,
+        position: file.patch.split("\n").length - 1,
       });
   }
 
