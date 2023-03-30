@@ -18,6 +18,14 @@ async function run() {
   const globs = core.getMultilineInput("include");
   const techStack = core.getInput("tech_stack");
 
+  core.info(
+    `Inputs: \n${JSON.stringify(
+      { language, model, include: globs, techStack },
+      null,
+      2
+    )}`
+  );
+
   const chat = new Chat(OPENAI_API_KEY, {
     language,
     model,
@@ -50,7 +58,8 @@ async function run() {
     });
 
   if (!compared.files || compared.files.length === 0) return;
-
+  core.info(`Files: \n${JSON.stringify(compared.files, null, 2)}`);
+  core.info(`Commits: \n${JSON.stringify(compared.commits, null, 2)}`);
   const files = compared.files.filter((file) => {
     return (
       file.patch &&
