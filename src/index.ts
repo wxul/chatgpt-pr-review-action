@@ -2,6 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { assert } from "console";
 import { Chat } from "./chat";
+import { include } from "./utils";
 
 const MAX_TOKEN = 1800;
 
@@ -14,18 +15,19 @@ async function run() {
 
   const language = core.getInput("language", { trimWhitespace: true });
   const model = core.getInput("model", { trimWhitespace: true });
-  const include = core.getMultilineInput("include");
+  const globs = core.getMultilineInput("include");
   const techStack = core.getInput("tech_stack");
 
-  const chat = new Chat(OPENAI_API_KEY);
+  const chat = new Chat(OPENAI_API_KEY, {
+    language,
+    model,
+    techStack: techStack ? techStack.split(",") : [],
+  });
   const context = github.context;
   const octokit = github.getOctokit(GITHUB_TOKEN);
 
   if (!OPENAI_API_KEY || !GITHUB_TOKEN) return;
 
-  core.info(
-    `params: ${JSON.stringify({ language, model, include, techStack })}`
-  );
   const pull_request = context.payload.pull_request;
   if (
     !pull_request ||
@@ -40,7 +42,7 @@ async function run() {
     owner: pull_request.base.user.login,
     repo: pull_request.base.repo.name,
   };
-  core.info(`params: ${JSON.stringify(repo)}`);
+
   const { data: compared } =
     await octokit.rest.repos.compareCommitsWithBasehead({
       ...repo,
@@ -48,12 +50,13 @@ async function run() {
     });
 
   if (!compared.files || compared.files.length === 0) return;
-  core.info(`compared: ${JSON.stringify(compared)}`);
+
   const files = compared.files.filter((file) => {
     return (
       file.patch &&
       file.patch.length <= MAX_TOKEN &&
-      ["modified", "added"].includes(file.status)
+      ["modified", "added"].includes(file.status) &&
+      include(file.filename, globs)
     );
   });
   for (const file of files) {
@@ -68,8 +71,6 @@ async function run() {
         position: file.patch.split("\n").length - 1,
       });
   }
-
-  core.info(JSON.stringify(compared));
 }
 
 run().catch((error) => {

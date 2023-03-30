@@ -33,7 +33,7 @@ jobs:
           language: 'English' ## Code Review Language, default: English
           tech_stack: typescript, react ## default empty
           model: 'gpt-3.5-turbo' ## default: gpt-3.5-turbo, optional: gpt-4
-          include: |
+          include: |   ## glob pattern
             *.ts
             *.tsx
 ```
