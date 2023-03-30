@@ -8,6 +8,7 @@ const MAX_TOKEN = 1800;
 
 async function run() {
   const begin = Date.now();
+
   const GITHUB_TOKEN = process.env["GITHUB_TOKEN"];
   const OPENAI_API_KEY = process.env["OPENAI_API_KEY"];
   assert(GITHUB_TOKEN, "Environment GITHUB_TOKEN is required");
@@ -46,6 +47,7 @@ async function run() {
     core.info("No a valid pr");
     return;
   }
+  core.info(`[Time:Start]: ${Date.now() - begin}`);
   const repo = {
     owner: pull_request.base.user.login,
     repo: pull_request.base.repo.name,
@@ -58,7 +60,7 @@ async function run() {
     });
 
   if (!compared.files || compared.files.length === 0) return;
-  core.info(`Files: \n${JSON.stringify(compared.files, null, 2)}`);
+  core.info(`All Files: \n${JSON.stringify(compared.files, null, 2)}`);
   core.info(`Commits: \n${JSON.stringify(compared.commits, null, 2)}`);
   const files = compared.files.filter((file) => {
     return (
@@ -68,9 +70,10 @@ async function run() {
       include(file.filename, globs)
     );
   });
+  core.info(`Review Files: \n${JSON.stringify(files, null, 2)}`);
   for (const file of files) {
     const response = await chat.review(file.patch);
-    if (response)
+    if (response) {
       await octokit.rest.pulls.createReviewComment({
         ...repo,
         pull_number: pull_request.number,
@@ -79,7 +82,13 @@ async function run() {
         body: response,
         position: file.patch.split("\n").length - 1,
       });
+      core.info(
+        `Add Commit: \n${response}\n for patch of file(${file.filename}):\n${file.patch}`
+      );
+    }
   }
+
+  core.info(`[Time:End]: ${Date.now() - begin}`);
 }
 
 run().catch((error) => {
