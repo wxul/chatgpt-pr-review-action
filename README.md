@@ -17,13 +17,23 @@ Use ChatGPT to Review Pull Request
 ### Action Config
 
 ``` yml
-uses: wxul/chatgpt-pr-review-action@v1
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  ## GITHUB_TOKEN
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} ## OPENAI_API_KEY
-with:
-  language: 'English' ## Code Review Language, default: English
-  tech_stack: typescript, react ## default empty
-  model: 'gpt-3.5-turbo' ## default: gpt-3.5-turbo, optional: gpt-4
-  include: '*.ts', '*.tsx'
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  example:
+    steps:
+      - uses: wxul/chatgpt-pr-review-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  ## GITHUB_TOKEN
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} ## OPENAI_API_KEY
+        with:
+          language: 'English' ## Code Review Language, default: English
+          tech_stack: typescript, react ## default empty
+          model: 'gpt-3.5-turbo' ## default: gpt-3.5-turbo, optional: gpt-4
+          include: |
+            *.ts
+            *.tsx
 ```
