@@ -3,6 +3,8 @@ import * as github from "@actions/github";
 import { assert } from "console";
 import { Chat } from "./chat";
 
+const MAX_TOKEN = 1800;
+
 async function run() {
   const begin = Date.now();
   const GITHUB_TOKEN = process.env["GITHUB_TOKEN"];
@@ -19,44 +21,54 @@ async function run() {
   const context = github.context;
   const octokit = github.getOctokit(GITHUB_TOKEN);
 
+  if (!OPENAI_API_KEY || !GITHUB_TOKEN) return;
+
   core.info(
     `params: ${JSON.stringify({ language, model, include, techStack })}`
   );
-
+  const pull_request = context.payload.pull_request;
   if (
-    !context.payload.pull_request ||
-    context.payload.pull_request.state === "closed" ||
-    context.payload.pull_request.draft ||
-    context.payload.pull_request.locked
+    !pull_request ||
+    pull_request.state === "closed" ||
+    pull_request.draft ||
+    pull_request.locked
   ) {
     core.info("No a valid pr");
     return;
   }
   const repo = {
-    owner: context.payload.pull_request.base.user.login,
-    repo: context.payload.pull_request.base.repo.name,
+    owner: pull_request.base.user.login,
+    repo: pull_request.base.repo.name,
   };
   const { data: compared } = await octokit.rest.repos.compareCommits({
     ...repo,
-    base: context.payload.pull_request.base.sha,
-    head: context.payload.pull_request.head.sha,
+    base: pull_request.base.sha,
+    head: pull_request.head.sha,
   });
-  // const { data: pullRequest } = await octokit.rest.pulls.get({
-  //   owner: context.payload.pull_request.base.user.login,
-  //   repo: context.payload.pull_request.base.repo.name,
-  //   pull_number: context.payload.pull_request.number,
-  //   mediaType: {
-  //     format: "raw",
-  //   },
-  // });
-  // core.info(JSON.stringify(pullRequest.assignee));
-  // core.info(JSON.stringify(pullRequest.assignees));
-  // core.info(JSON.stringify(pullRequest.body));
-  // core.info(JSON.stringify(pullRequest.changed_files));
-  // core.info(JSON.stringify({ ...pullRequest }));
-  core.info(JSON.stringify(compared));
 
-  if (!OPENAI_API_KEY || !GITHUB_TOKEN) return;
+  if (!compared.files || compared.files.length === 0) return;
+
+  const files = compared.files.filter((file) => {
+    return (
+      file.patch &&
+      file.patch.length <= MAX_TOKEN &&
+      ["modified", "added"].includes(file.status)
+    );
+  });
+  for (const file of files) {
+    const response = await chat.review(file.patch);
+    if (response)
+      await octokit.rest.pulls.createReviewComment({
+        ...repo,
+        pull_number: pull_request.number,
+        commit_id: compared.commits[compared.commits.length - 1].sha,
+        path: file.filename,
+        body: response,
+        line: file.patch.split("\n").length - 1,
+      });
+  }
+
+  core.info(JSON.stringify(compared));
 }
 
 run().catch((error) => {

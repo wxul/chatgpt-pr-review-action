@@ -81,6 +81,6 @@ export class Chat {
   async review(patch: string = "") {
     if (!patch.trim()) return;
     const response = await this.request(this.preparePrompt(patch));
-    return response?.choices?.[0]?.message;
+    return response?.choices?.[0]?.message?.content ?? null;
   }
 }
