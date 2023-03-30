@@ -1,0 +1,25 @@
+name: 'ChatGPT PR Review Action'
+description: 'Use ChatGPT to Review Pull Request.'
+author: wxul
+inputs:
+  language:
+    description: Language
+    default: English
+    required: false
+
+  tech_stack:
+    description: Tech stack list
+    required: false
+
+  model:
+    description: ChatGPT model
+    default: gpt-3.5-turbo
+    required: false
+
+  include:
+    description: Include files
+    required: true
+
+runs:
+  using: 'node16'
+  main: 'lib/index.js'
