@@ -34,6 +34,6 @@ jobs:
           tech_stack: typescript, react ## default empty
           model: 'gpt-3.5-turbo' ## default: gpt-3.5-turbo, optional: gpt-4
           include: |   ## glob pattern
-            *.ts
-            *.tsx
+            src/**/*.ts
+            src/**/*.tsx
 ```
