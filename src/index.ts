@@ -52,6 +52,11 @@ async function run() {
     repo: pull_request.base.repo.name,
   };
 
+  const { data: comments } = await octokit.rest.pulls.listReviewComments({
+    ...repo,
+    pull_number: pull_request.number,
+  });
+  core.info(`All Comments: \n${JSON.stringify(comments, null, 2)}`);
   const { data: compared } =
     await octokit.rest.repos.compareCommitsWithBasehead({
       ...repo,
