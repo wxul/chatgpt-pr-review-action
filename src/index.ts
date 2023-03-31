@@ -1,7 +1,12 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Chat } from "./chat";
-import { assert, getPatchLineLength, include } from "./utils";
+import {
+  assert,
+  getPatchLineLength,
+  include,
+  uniqPromiseWithParams,
+} from "./utils";
 
 const MAX_TOKEN = 1800;
 
@@ -57,31 +62,57 @@ async function run() {
     pull_number: pull_request.number,
   });
   core.info(`All Comments: \n${JSON.stringify(comments, null, 2)}`);
-  const { data: compared } =
-    await octokit.rest.repos.compareCommitsWithBasehead({
-      ...repo,
-      basehead: `${pull_request.base.sha}...${pull_request.head.sha}`,
-    });
 
-  const hasSameComment = (path: string, patch: string): boolean => {
-    const find = comments.find((comment) => {
-      return comment.path === path && comment.diff_hunk === patch;
+  const cachedCompare = uniqPromiseWithParams(
+    async (params: { owner: string; repo: string; basehead: string }) => {
+      return await octokit.rest.repos.compareCommitsWithBasehead({
+        ...params,
+      });
+    }
+  );
+
+  const { data: compared } = await cachedCompare({
+    ...repo,
+    basehead: `${pull_request.base.sha}...${pull_request.head.sha}`,
+  });
+
+  const nothingChangedSincePreviousComment = async (
+    path: string,
+    patch: string
+  ): Promise<boolean> => {
+    const targetComment = comments.find((comment) => {
+      return comment.path === path;
     });
-    return Boolean(find);
+    if (!targetComment) return false;
+    if (targetComment && targetComment.diff_hunk === patch) return true;
+    const { data: compareComment } = await cachedCompare({
+      ...repo,
+      basehead: `${targetComment.commit_id}...${pull_request.head.sha}`,
+    });
+    return !Boolean(
+      compareComment.files?.find((file) => file.filename === path)
+    );
   };
 
   if (!compared.files || compared.files.length === 0) return;
   core.info(`All Files: \n${JSON.stringify(compared.files, null, 2)}`);
   core.info(`Commits: \n${JSON.stringify(compared.commits, null, 2)}`);
-  const files = compared.files.filter((file) => {
-    return (
+  const files: typeof compared.files = [];
+  for (const file of compared.files) {
+    let needReview =
       file.patch &&
       file.patch.length <= MAX_TOKEN &&
       ["modified", "added"].includes(file.status) &&
-      include(file.filename, globs) &&
-      !hasSameComment(file.filename, file.patch)
+      include(file.filename, globs);
+    if (!needReview) continue;
+    const noChange = await nothingChangedSincePreviousComment(
+      file.filename,
+      file.patch
     );
-  });
+    if (!noChange) {
+      files.push(file);
+    }
+  }
   core.info(`Review Files: \n${JSON.stringify(files, null, 2)}`);
   for (const file of files) {
     const response = await chat.review(file.patch);
@@ -93,8 +124,7 @@ async function run() {
           commit_id: compared.commits[compared.commits.length - 1].sha,
           path: file.filename,
           body: response,
-          line: getPatchLineLength(file.patch) - 1,
-          side: "RIGHT",
+          position: getPatchLineLength(file.patch) - 1,
         });
         core.info(
           `Add Commit: \n${response}\nFor patch of file(${file.filename}):\n${file.patch}`

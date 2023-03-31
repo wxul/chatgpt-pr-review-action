@@ -27,3 +27,30 @@ export function getPatchLineLength(patch: string) {
   }
   return count;
 }
+
+export function generateObjectKey(obj: Record<string, any>) {
+  const keys = Object.keys(obj).sort();
+  const result: Record<string, any> = {};
+  keys.forEach((key) => {
+    result[key] = obj[key];
+  });
+  return JSON.stringify(result);
+}
+
+/**
+ * 封装promise，根据不同的参数缓存promise
+ * @param func
+ * @returns
+ */
+export function uniqPromiseWithParams<A = any, R = void>(
+  func: (params: A) => Promise<R>,
+  timeout = 5 * 24 * 3600
+) {
+  const promiseMap: Record<string, { func: Promise<R>; time: number }> = {};
+  return function (params: A) {
+    const key = generateObjectKey(params ?? {});
+    if (!promiseMap[key] || promiseMap[key].time + timeout < Date.now())
+      promiseMap[key] = { func: func(params), time: Date.now() };
+    return promiseMap[key].func;
+  };
+}
