@@ -22,6 +22,8 @@ async function run() {
   const model = core.getInput("model", { trimWhitespace: true });
   const globs = core.getMultilineInput("include");
   const techStack = core.getInput("tech_stack");
+  const customSystem = core.getInput("custom_system");
+  const overridePrompt = core.getInput("override_prompt");
 
   core.debug(
     `Inputs: \n${JSON.stringify(
@@ -35,6 +37,8 @@ async function run() {
     language,
     model,
     techStack: techStack ? techStack.split(",") : [],
+    system: customSystem,
+    overridePrompt,
   });
   const context = github.context;
   const octokit = github.getOctokit(GITHUB_TOKEN);
