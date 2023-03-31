@@ -89,6 +89,7 @@ async function run() {
       ...repo,
       basehead: `${targetComment.commit_id}...${pull_request.head.sha}`,
     });
+    core.info(`Compare Files: \n${JSON.stringify(compareComment.files, null, 2)}`);
     return !Boolean(
       compareComment.files?.find((file) => file.filename === path)
     );
