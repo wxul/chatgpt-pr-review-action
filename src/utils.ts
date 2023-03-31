@@ -10,3 +10,20 @@ export function assert(val: any, message: string) {
     throw new Error(message);
   }
 }
+
+export function getPatchLineLength(patch: string) {
+  if (!patch) return 0;
+  let count = 1;
+  let start = 0;
+  const BR = "\n";
+  while (start < patch.length - BR.length + 1) {
+    let char = patch.slice(start, start + BR.length);
+    if (char === BR) {
+      count++;
+      start += BR.length;
+    } else {
+      start++;
+    }
+  }
+  return count;
+}

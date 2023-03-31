@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Chat } from "./chat";
-import { assert, include } from "./utils";
+import { assert, getPatchLineLength, include } from "./utils";
 
 const MAX_TOKEN = 1800;
 
@@ -63,6 +63,13 @@ async function run() {
       basehead: `${pull_request.base.sha}...${pull_request.head.sha}`,
     });
 
+  const hasSameComment = (path: string, patch: string): boolean => {
+    const find = comments.find((comment) => {
+      return comment.path === path && comment.diff_hunk === patch;
+    });
+    return Boolean(find);
+  };
+
   if (!compared.files || compared.files.length === 0) return;
   core.info(`All Files: \n${JSON.stringify(compared.files, null, 2)}`);
   core.info(`Commits: \n${JSON.stringify(compared.commits, null, 2)}`);
@@ -71,7 +78,8 @@ async function run() {
       file.patch &&
       file.patch.length <= MAX_TOKEN &&
       ["modified", "added"].includes(file.status) &&
-      include(file.filename, globs)
+      include(file.filename, globs) &&
+      !hasSameComment(file.filename, file.patch)
     );
   });
   core.info(`Review Files: \n${JSON.stringify(files, null, 2)}`);
@@ -85,10 +93,11 @@ async function run() {
           commit_id: compared.commits[compared.commits.length - 1].sha,
           path: file.filename,
           body: response,
-          position: file.patch.split("\n").length - 1,
+          line: getPatchLineLength(file.patch) - 1,
+          side: "RIGHT",
         });
         core.info(
-          `Add Commit: \n${response}\n for patch of file(${file.filename}):\n${file.patch}`
+          `Add Commit: \n${response}\nFor patch of file(${file.filename}):\n${file.patch}`
         );
       } catch (error) {
         core.warning(`Request Error: ${error.message}`);
