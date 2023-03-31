@@ -75,21 +75,30 @@ async function run() {
     ...repo,
     basehead: `${pull_request.base.sha}...${pull_request.head.sha}`,
   });
+  const lastCommitId = compared.commits[compared.commits.length - 1].sha;
 
   const nothingChangedSincePreviousComment = async (
     path: string,
     patch: string
   ): Promise<boolean> => {
-    const targetComment = comments.find((comment) => {
+    const targetComments = comments.filter((comment) => {
       return comment.path === path;
     });
-    if (!targetComment) return false;
-    if (targetComment && targetComment.diff_hunk === patch) return true;
+    if (!targetComments || targetComments.length === 0) return false;
+    const exactMatch = targetComments.find(
+      (comment) => comment.diff_hunk === patch
+    );
+    if (exactMatch) return true;
+    const latestComment = targetComments.sort(
+      (c1, c2) => +new Date(c2.created_at) - +new Date(c1.created_at)
+    )[0];
     const { data: compareComment } = await cachedCompare({
       ...repo,
-      basehead: `${targetComment.commit_id}...${pull_request.head.sha}`,
+      basehead: `${latestComment.original_commit_id}...${lastCommitId}`,
     });
-    core.info(`Compare Files: \n${JSON.stringify(compareComment.files, null, 2)}`);
+    core.info(
+      `Compare Files: \n${JSON.stringify(compareComment.files, null, 2)}`
+    );
     return !Boolean(
       compareComment.files?.find((file) => file.filename === path)
     );
@@ -122,7 +131,7 @@ async function run() {
         await octokit.rest.pulls.createReviewComment({
           ...repo,
           pull_number: pull_request.number,
-          commit_id: compared.commits[compared.commits.length - 1].sha,
+          commit_id: lastCommitId,
           path: file.filename,
           body: response,
           position: getPatchLineLength(file.patch) - 1,
