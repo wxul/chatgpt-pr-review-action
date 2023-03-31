@@ -23,7 +23,7 @@ async function run() {
   const globs = core.getMultilineInput("include");
   const techStack = core.getInput("tech_stack");
 
-  core.info(
+  core.debug(
     `Inputs: \n${JSON.stringify(
       { language, model, include: globs, techStack },
       null,
@@ -39,8 +39,6 @@ async function run() {
   const context = github.context;
   const octokit = github.getOctokit(GITHUB_TOKEN);
 
-  if (!OPENAI_API_KEY || !GITHUB_TOKEN) return;
-
   const pull_request = context.payload.pull_request;
   if (
     !pull_request ||
@@ -48,8 +46,7 @@ async function run() {
     pull_request.draft ||
     pull_request.locked
   ) {
-    core.info("No a valid pr");
-    return;
+    throw new Error("Not a valid pull request");
   }
   core.info(`[Time:Start]: ${Date.now() - begin}`);
   const repo = {
@@ -61,7 +58,7 @@ async function run() {
     ...repo,
     pull_number: pull_request.number,
   });
-  core.info(`All Comments: \n${JSON.stringify(comments, null, 2)}`);
+  core.debug(`All Comments: \n${JSON.stringify(comments, null, 2)}`);
 
   const cachedCompare = uniqPromiseWithParams(
     async (params: { owner: string; repo: string; basehead: string }) => {
@@ -96,7 +93,7 @@ async function run() {
       ...repo,
       basehead: `${latestComment.original_commit_id}...${lastCommitId}`,
     });
-    core.info(
+    core.debug(
       `Compare Files: \n${JSON.stringify(compareComment.files, null, 2)}`
     );
     return !Boolean(
@@ -105,8 +102,8 @@ async function run() {
   };
 
   if (!compared.files || compared.files.length === 0) return;
-  core.info(`All Files: \n${JSON.stringify(compared.files, null, 2)}`);
-  core.info(`Commits: \n${JSON.stringify(compared.commits, null, 2)}`);
+  core.debug(`All Files: \n${JSON.stringify(compared.files, null, 2)}`);
+  core.debug(`Commits: \n${JSON.stringify(compared.commits, null, 2)}`);
   const files: typeof compared.files = [];
   for (const file of compared.files) {
     let needReview =
@@ -123,7 +120,7 @@ async function run() {
       files.push(file);
     }
   }
-  core.info(`Review Files: \n${JSON.stringify(files, null, 2)}`);
+  core.debug(`Review Files: \n${JSON.stringify(files, null, 2)}`);
   for (const file of files) {
     const response = await chat.review(file.patch);
     if (response) {
@@ -137,7 +134,7 @@ async function run() {
           position: getPatchLineLength(file.patch) - 1,
         });
         core.info(
-          `Add Commit: \n${response}\nFor patch of file(${file.filename}):\n${file.patch}`
+          `Add Commit to File(${file.filename}): \n${response}\nwith patch:\n${file.patch}`
         );
       } catch (error) {
         core.warning(`Request Error: ${error.message}`);
