@@ -48,6 +48,7 @@ export function uniqPromiseWithParams<A = any, R = void>(
 ) {
   const promiseMap: Record<string, { func: Promise<R>; time: number }> = {};
   return function (params: A) {
+    console.log("Map", promiseMap);
     const key = generateObjectKey(params ?? {});
     if (!promiseMap[key] || promiseMap[key].time + timeout < Date.now())
       promiseMap[key] = { func: func(params), time: Date.now() };
