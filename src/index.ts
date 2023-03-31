@@ -1,8 +1,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { assert } from "console";
 import { Chat } from "./chat";
-import { include } from "./utils";
+import { assert, include } from "./utils";
 
 const MAX_TOKEN = 1800;
 
@@ -74,17 +73,21 @@ async function run() {
   for (const file of files) {
     const response = await chat.review(file.patch);
     if (response) {
-      await octokit.rest.pulls.createReviewComment({
-        ...repo,
-        pull_number: pull_request.number,
-        commit_id: compared.commits[compared.commits.length - 1].sha,
-        path: file.filename,
-        body: response,
-        position: file.patch.split("\n").length - 1,
-      });
-      core.info(
-        `Add Commit: \n${response}\n for patch of file(${file.filename}):\n${file.patch}`
-      );
+      try {
+        await octokit.rest.pulls.createReviewComment({
+          ...repo,
+          pull_number: pull_request.number,
+          commit_id: compared.commits[compared.commits.length - 1].sha,
+          path: file.filename,
+          body: response,
+          position: file.patch.split("\n").length - 1,
+        });
+        core.info(
+          `Add Commit: \n${response}\n for patch of file(${file.filename}):\n${file.patch}`
+        );
+      } catch (error) {
+        core.warning(`Request Error: ${error.message}`);
+      }
     }
   }
 
