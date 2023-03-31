@@ -12,11 +12,17 @@ Use ChatGPT to Review Pull Request
 
 ## Inputs
 
+see [action.yml](action.yml)
+
 ## Example usage
 
 ### Action Config
 
 ``` yml
+
+permissions:
+  contents: read
+  pull-requests: write
 
 on:
   pull_request:
@@ -31,7 +37,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} ## OPENAI_API_KEY
         with:
           language: 'English' ## Code Review Language, default: English
-          tech_stack: typescript, react ## default empty
+          tech_stack: typescript, react ## default empty, If set, it would facilitate better review for chatGPT.
           model: 'gpt-3.5-turbo' ## default: gpt-3.5-turbo, optional: gpt-4
           include: |   ## glob pattern
             src/**/*.ts
