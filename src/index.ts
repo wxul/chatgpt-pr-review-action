@@ -8,7 +8,7 @@ import {
   uniqPromiseWithParams,
 } from "./utils";
 
-const MAX_TOKEN = 1800;
+const DEFAULT_MAX_TOKEN = 2000;
 
 async function run() {
   const begin = Date.now();
@@ -24,6 +24,7 @@ async function run() {
   const techStack = core.getInput("tech_stack");
   const customSystem = core.getInput("custom_system");
   const overridePrompt = core.getInput("override_prompt");
+  const maxToken = Number(core.getInput("max_token")) || DEFAULT_MAX_TOKEN;
 
   core.debug(
     `Inputs: \n${JSON.stringify(
@@ -112,7 +113,7 @@ async function run() {
   for (const file of compared.files) {
     let needReview =
       file.patch &&
-      file.patch.length <= MAX_TOKEN &&
+      file.patch.length <= maxToken &&
       ["modified", "added"].includes(file.status) &&
       include(file.filename, globs);
     if (!needReview) continue;

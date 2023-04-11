@@ -24,6 +24,11 @@ inputs:
     default: gpt-3.5-turbo
     required: false
 
+  max_token:
+    description: ChatGPT max token, default is 2000
+    default: '2000'
+    required: false
+
   include:
     description: Include files
     required: true
