@@ -8,7 +8,7 @@ import {
   uniqPromiseWithParams,
 } from "./utils";
 
-const DEFAULT_MAX_TOKEN = 2000;
+const DEFAULT_MAX_TOKEN = 4000;
 
 async function run() {
   const begin = Date.now();
