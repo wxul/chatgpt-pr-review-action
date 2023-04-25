@@ -9,6 +9,7 @@ import {
 } from "./utils";
 
 const DEFAULT_MAX_TOKEN = 4000;
+const PAGE_SIZE = 100;
 
 async function run() {
   const begin = Date.now();
@@ -62,7 +63,25 @@ async function run() {
   const { data: comments } = await octokit.rest.pulls.listReviewComments({
     ...repo,
     pull_number: pull_request.number,
+    per_page: PAGE_SIZE,
+    page: 1,
   });
+  // list all comments
+  if (comments.length >= PAGE_SIZE) {
+    let index = 2;
+    while (true) {
+      const { data: append } = await octokit.rest.pulls.listReviewComments({
+        ...repo,
+        pull_number: pull_request.number,
+        per_page: PAGE_SIZE,
+        page: index,
+      });
+      comments.push(...append);
+      index++;
+      if (append.length < PAGE_SIZE || index > 10) break;
+    }
+  }
+
   core.debug(`All Comments: \n${JSON.stringify(comments, null, 2)}`);
 
   const cachedCompare = uniqPromiseWithParams(
