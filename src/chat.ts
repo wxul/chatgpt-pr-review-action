@@ -92,6 +92,7 @@ export class Chat {
       tech,
       "Please review the code and provide your feedback on any improvements that could be made to make this function more efficient or readable.",
       `You have been asked to review a pull request with code patch bellow and answer me in ${this.language}.`,
+      "If the code patch is too simple and there are no issues, please return [No].",
     ].join("\n");
   }
 

@@ -151,20 +151,26 @@ async function run() {
   for (const file of files) {
     const response = await chat.review(file.patch);
     if (response) {
-      try {
-        await octokit.rest.pulls.createReviewComment({
-          ...repo,
-          pull_number: pull_request.number,
-          commit_id: lastCommitId,
-          path: file.filename,
-          body: response,
-          position: getPatchLineLength(file.patch) - 1,
-        });
+      if (response.length < 10) {
         core.info(
-          `Add Commit to File(${file.filename}): \n${response}\nwith patch:\n${file.patch}`
+          `Too simple to require a review(${file.filename}): \n${response}\nwith patch:\n${file.patch}`
         );
-      } catch (error) {
-        core.warning(`Request Error: ${error.message}`);
+      } else {
+        try {
+          await octokit.rest.pulls.createReviewComment({
+            ...repo,
+            pull_number: pull_request.number,
+            commit_id: lastCommitId,
+            path: file.filename,
+            body: response,
+            position: getPatchLineLength(file.patch) - 1,
+          });
+          core.info(
+            `Add Commit to File(${file.filename}): \n${response}\nwith patch:\n${file.patch}`
+          );
+        } catch (error) {
+          core.warning(`Request Error: ${error.message}`);
+        }
       }
     }
   }
