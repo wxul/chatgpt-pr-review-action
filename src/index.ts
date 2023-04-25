@@ -78,7 +78,10 @@ async function run() {
       });
       comments.push(...append);
       index++;
-      if (append.length < PAGE_SIZE || index > 10) break;
+      if (append.length < PAGE_SIZE) break;
+      if (index > 10) {
+        throw new Error("Too many comments");
+      }
     }
   }
 
