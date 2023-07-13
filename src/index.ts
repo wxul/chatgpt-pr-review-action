@@ -26,6 +26,7 @@ async function run() {
   const customSystem = core.getInput("custom_system");
   const overridePrompt = core.getInput("override_prompt");
   const maxToken = Number(core.getInput("max_token")) || DEFAULT_MAX_TOKEN;
+  const filterLabel = core.getInput("filter_with_label");
 
   core.debug(
     `Inputs: \n${JSON.stringify(
@@ -46,6 +47,14 @@ async function run() {
   const octokit = github.getOctokit(GITHUB_TOKEN);
 
   const pull_request = context.payload.pull_request;
+  if (
+    filterLabel &&
+    pull_request.labels &&
+    pull_request.labels.find((label) => label.name === filterLabel)
+  ) {
+    core.info(`Skipped!`);
+    return;
+  }
   if (
     !pull_request ||
     pull_request.state === "closed" ||

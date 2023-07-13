@@ -33,6 +33,10 @@ inputs:
     description: Include files
     required: true
 
+  filter_with_label:
+    description: Only review with specific label if set
+    required: false
+
 runs:
   using: 'node16'
   main: 'lib/index.js'
