@@ -47,13 +47,15 @@ async function run() {
   const octokit = github.getOctokit(GITHUB_TOKEN);
 
   const pull_request = context.payload.pull_request;
-  if (
-    filterLabel &&
-    pull_request.labels &&
-    pull_request.labels.find((label) => label.name === filterLabel)
-  ) {
-    core.info(`Skipped!`);
-    return;
+  if (filterLabel) {
+    // skip review if filter_with_label is not in pr labels
+    if (
+      !(pull_request.labels || []).find((label) => label.name === filterLabel)
+    ) {
+      core.info(`Label ${filterLabel} is not found, skip review.`);
+      core.info(`[Time:End]: ${Date.now() - begin}`);
+      return;
+    }
   }
   if (
     !pull_request ||
